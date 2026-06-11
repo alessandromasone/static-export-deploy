@@ -1,0 +1,262 @@
+/* Static Export & Deploy — stile minimale integrato con l'admin WordPress */
+
+.sed-wrap .sed-notice {
+	margin: 12px 0 4px;
+}
+
+/* Colonne di postbox nativi */
+.sed-columns {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px;
+	max-width: 1100px;
+	margin-top: 16px;
+}
+
+@media ( max-width: 1100px ) {
+	.sed-columns {
+		grid-template-columns: 1fr;
+	}
+}
+
+.sed-columns .postbox {
+	margin-bottom: 0;
+}
+
+/* Header dei postbox: gli stili compatti di core vivono nel CSS delle
+   schermate di modifica (#poststuff), che NON viene caricato sulle pagine
+   admin custom — senza queste regole i titoli renderizzano come h2 giganti. */
+.sed-wrap .postbox-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	border-bottom: 1px solid #c3c4c7;
+}
+
+.sed-wrap .postbox-header h2.hndle {
+	margin: 0;
+	padding: 10px 14px;
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 1.4;
+	color: #1d2327;
+}
+
+.sed-wrap .postbox .inside {
+	margin: 0;
+	padding: 12px 14px 14px;
+}
+
+/* Stato */
+.sed-status-line {
+	margin: 4px 0 0;
+}
+
+.sed-badge {
+	display: inline-block;
+	padding: 1px 8px;
+	margin-right: 6px;
+	border-radius: 3px;
+	font-size: 12px;
+	font-weight: 600;
+	text-transform: capitalize;
+	background: #f0f0f1;
+	color: #50575e;
+}
+
+.sed-badge.running   { background: #e5f1f8; color: #2271b1; }
+.sed-badge.done      { background: #edfaef; color: #008a20; }
+.sed-badge.error     { background: #fcf0f1; color: #d63638; }
+.sed-badge.cancelled { background: #fcf9e8; color: #996800; }
+
+.sed-progress {
+	height: 8px;
+	margin: 12px 0;
+	background: #f0f0f1;
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.sed-progress-bar {
+	height: 100%;
+	width: 0;
+	background: #2271b1;
+	transition: width 0.4s ease;
+}
+
+.sed-progress-bar.sed-bar-error {
+	background: #d63638;
+}
+
+.sed-actions {
+	margin: 16px 0 8px;
+}
+
+.sed-actions .button-link-delete {
+	margin-left: 10px;
+}
+
+#sed-downloads .button {
+	margin: 0 6px 6px 0;
+}
+
+#sed-error {
+	margin: 12px 0;
+}
+
+/* Riepilogo configurazione */
+.sed-summary {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.sed-summary th {
+	width: 120px;
+	padding: 5px 10px 5px 0;
+	text-align: left;
+	font-weight: 400;
+	color: #646970;
+	vertical-align: top;
+	white-space: nowrap;
+}
+
+.sed-summary td {
+	padding: 5px 0;
+}
+
+.sed-ok  { color: #008a20; }
+.sed-err { color: #d63638; }
+
+/* Log */
+.sed-log-wrap {
+	max-width: 1100px;
+	margin-top: 16px;
+}
+
+.sed-log-wrap summary {
+	cursor: pointer;
+	padding: 6px 0;
+	font-weight: 600;
+	color: #1d2327;
+	user-select: none;
+}
+
+.sed-log {
+	margin: 4px 0 0;
+	padding: 12px 14px;
+	max-height: 360px;
+	overflow: auto;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	font-size: 12px;
+	line-height: 1.7;
+	color: #50575e;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+/* Impostazioni */
+.sed-settings {
+	max-width: 900px;
+}
+
+.sed-settings h2.title {
+	margin: 2.2em 0 0.4em;
+	padding-top: 1.6em;
+	border-top: 1px solid #dcdcde;
+}
+
+.sed-settings h2.title:first-of-type {
+	margin-top: 1em;
+	padding-top: 0;
+	border-top: none;
+}
+
+.sed-settings h2.title + p {
+	margin-top: 0;
+	color: #646970;
+}
+
+.sed-input-s {
+	width: 8em;
+}
+
+.sed-inline-check {
+	margin-left: 10px;
+}
+
+.sed-muted {
+	color: #787c82;
+	font-weight: 400;
+}
+
+/* Campi affiancati con etichetta sopra (branch, sottodomini) */
+.sed-field {
+	display: inline-block;
+	margin-right: 18px;
+	vertical-align: top;
+}
+
+.sed-field-label {
+	display: block;
+	margin-bottom: 3px;
+	font-size: 12px;
+	color: #646970;
+}
+
+.sed-arrow {
+	display: inline-block;
+	margin: 22px 18px 0 0;
+	color: #787c82;
+}
+
+.sed-check-row {
+	margin: 10px 0 2px;
+}
+
+/* Il badge ora usa etichette gia' in italiano */
+.sed-badge {
+	text-transform: none;
+}
+
+/* Pagina Artefatti */
+.sed-artifacts {
+	max-width: 1100px;
+	margin-top: 8px;
+}
+
+.sed-artifacts th,
+.sed-artifacts td {
+	vertical-align: middle;
+}
+
+.sed-artifacts td .button-small {
+	margin: 2px 6px 2px 0;
+}
+
+.sed-col-actions {
+	width: 90px;
+	text-align: right;
+}
+
+.sed-artifacts .button-link-delete {
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.sed-bulk {
+	max-width: 1100px;
+	margin-top: 12px;
+	text-align: right;
+}
+
+.sed-empty {
+	max-width: 1100px;
+	padding: 24px;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	text-align: center;
+	color: #646970;
+}

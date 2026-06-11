@@ -1,0 +1,38 @@
+name: Build & Package Plugin
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Prepare Directory Structure
+        run: |
+          mkdir static-export-deploy
+
+          cp static-export-deploy.php static-export-deploy/
+          cp uninstall.php static-export-deploy/
+          cp readme.txt static-export-deploy/
+          cp -r includes static-export-deploy/
+          cp -r assets static-export-deploy/
+
+          if [ -f LICENSE ]; then cp LICENSE static-export-deploy/; fi
+          if [ -f index.php ]; then cp index.php static-export-deploy/; fi
+
+      - name: Zip Plugin
+        run: zip -r static-export-deploy.zip static-export-deploy
+
+      - name: Upload Asset to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: static-export-deploy.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

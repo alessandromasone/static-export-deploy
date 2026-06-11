@@ -1,0 +1,15 @@
+# Pacchetti generati
+*.zip
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+
+# Dipendenze (se in futuro servissero strumenti di build)
+node_modules/
+vendor/
