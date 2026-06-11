@@ -277,7 +277,7 @@ class SED_Optimizer {
 			$new  = $content;
 
 			if ( 'html' === $ext || 'htm' === $ext ) {
-				$new = $this->clean_html( $content );
+				$new = $this->clean_html( $content, $rel );
 			} elseif ( 'xml' === $ext && SED_Crawler::looks_like_sitemap( $content ) ) {
 				// Dal contenuto, non dal nome: copre wp-sitemap-*.xml di
 				// WordPress e qualunque sitemap annidata con nome custom.
@@ -287,6 +287,9 @@ class SED_Optimizer {
 			} else {
 				// CSS, JSON, XML generici, MD, TXT: solo sostituzioni testuali sicure.
 				$new = $this->apply_common_replacements( $content );
+				if ( 'css' === $ext && ! empty( $this->opts['perf_font_display'] ) ) {
+					$new = $this->fix_font_display( $new );
+				}
 			}
 
 			if ( $new !== $content ) {
@@ -378,10 +381,268 @@ class SED_Optimizer {
 	}
 
 	/* ------------------------------------------------------------------ */
+	/* Prestazioni (Core Web Vitals)                                         */
+	/* ------------------------------------------------------------------ */
+
+	const INLINE_CSS_MAX = 15360; // 15 KiB: soglia di incorporamento CSS.
+
+	/**
+	 * Incorpora nell'HTML i fogli di stile interni piccoli, togliendoli dal
+	 * percorso critico del rendering (PageSpeed: "richieste di blocco del
+	 * rendering"). I riferimenti url() relativi vengono riscritti in
+	 * root-relative cosi' font e immagini del CSS continuano a funzionare.
+	 */
+	private function inline_small_css( DOMDocument $dom, $page_rel ) {
+		foreach ( iterator_to_array( $dom->getElementsByTagName( 'link' ) ) as $node ) {
+			$rels = array_map( 'strtolower', preg_split( '/\s+/', trim( $node->getAttribute( 'rel' ) ) ) );
+			if ( ! in_array( 'stylesheet', $rels, true ) ) {
+				continue;
+			}
+			$href = $node->getAttribute( 'href' );
+			$rel  = $this->href_to_relpath( $href, $page_rel );
+			if ( null === $rel ) {
+				continue; // Esterno o non risolvibile.
+			}
+			$file = $this->dir . '/' . $rel;
+			if ( ! file_exists( $file ) || filesize( $file ) > self::INLINE_CSS_MAX ) {
+				continue;
+			}
+			$css = (string) @file_get_contents( $file );
+			if ( '' === $css ) {
+				continue;
+			}
+
+			$css = preg_replace( '/@charset[^;]*;/i', '', $css );
+			$css = $this->rewrite_css_urls_to_root( $css, dirname( $rel ) );
+			if ( ! empty( $this->opts['perf_font_display'] ) ) {
+				$css = $this->fix_font_display( $css );
+			}
+			$css = $this->apply_common_replacements( $css );
+
+			$style = $dom->createElement( 'style' );
+			$media = trim( $node->getAttribute( 'media' ) );
+			if ( '' !== $media && 'all' !== strtolower( $media ) ) {
+				$style->setAttribute( 'media', $media );
+			}
+			$style->appendChild( $dom->createTextNode( $css ) );
+			$node->parentNode->replaceChild( $style, $node );
+		}
+	}
+
+	/**
+	 * Aggiunge font-display:swap a ogni @font-face che non lo dichiara
+	 * (PageSpeed: "carattere visualizzato", riduce anche il CLS).
+	 * Il ';' iniziale protegge i blocchi che non terminano con punto e virgola.
+	 */
+	public function fix_font_display( $css ) {
+		return preg_replace_callback( '/@font-face\s*\{[^}]*\}/i', function ( $m ) {
+			if ( false !== stripos( $m[0], 'font-display' ) ) {
+				return $m[0];
+			}
+			return preg_replace( '/\}\s*$/', ';font-display:swap;}', $m[0] );
+		}, $css );
+	}
+
+	/**
+	 * Riscrive gli url() relativi di un CSS in root-relative, rispetto alla
+	 * cartella originaria del file (necessario quando il CSS viene inlinato).
+	 */
+	private function rewrite_css_urls_to_root( $css, $css_dir ) {
+		return preg_replace_callback( '/(url\(\s*["\']?)([^"\')\s]+)(["\']?\s*\))/i', function ( $m ) use ( $css_dir ) {
+			$url = trim( $m[2] );
+			if ( preg_match( '#^(data:|https?:|//|/|\#)#i', $url ) ) {
+				return $m[0];
+			}
+			$parts = array();
+			foreach ( explode( '/', $css_dir . '/' . $url ) as $segment ) {
+				if ( '' === $segment || '.' === $segment ) {
+					continue;
+				}
+				if ( '..' === $segment ) {
+					array_pop( $parts );
+					continue;
+				}
+				$parts[] = $segment;
+			}
+			return $m[1] . '/' . implode( '/', $parts ) . $m[3];
+		}, $css );
+	}
+
+	/**
+	 * Migliora il caricamento delle immagini (PageSpeed: CLS + LCP):
+	 *  - width/height mancanti letti dal file reale (evita layout shift)
+	 *  - prima immagine del documento: fetchpriority=high (candidata LCP)
+	 *  - immagini successive: loading=lazy
+	 *  - decoding=async su tutte
+	 */
+	private function enhance_images( DOMDocument $dom, $page_rel ) {
+		$first = true;
+		foreach ( $dom->getElementsByTagName( 'img' ) as $img ) {
+			$src = $img->getAttribute( 'src' );
+
+			if ( ! $img->hasAttribute( 'width' ) || ! $img->hasAttribute( 'height' ) ) {
+				$size = $this->local_image_size( $src, $page_rel );
+				if ( $size ) {
+					$img->setAttribute( 'width', (string) $size[0] );
+					$img->setAttribute( 'height', (string) $size[1] );
+				}
+			}
+
+			if ( ! $img->hasAttribute( 'decoding' ) ) {
+				$img->setAttribute( 'decoding', 'async' );
+			}
+
+			if ( $first ) {
+				if ( ! $img->hasAttribute( 'fetchpriority' ) ) {
+					$img->setAttribute( 'fetchpriority', 'high' );
+				}
+				$img->removeAttribute( 'loading' ); // Mai lazy sulla candidata LCP.
+				$first = false;
+			} elseif ( ! $img->hasAttribute( 'loading' ) ) {
+				$img->setAttribute( 'loading', 'lazy' );
+			}
+		}
+	}
+
+	/**
+	 * Dimensioni reali di un'immagine locale. Il src puo' essere gia' .webp
+	 * mentre su disco esiste ancora l'originale (l'ordine di elaborazione dei
+	 * file non e' garantito): si provano entrambe le varianti.
+	 *
+	 * @return array|null [w, h]
+	 */
+	private function local_image_size( $src, $page_rel ) {
+		if ( '' === $src || 0 === strpos( $src, 'data:' ) ) {
+			return null;
+		}
+		$rel = $this->href_to_relpath( $src, $page_rel );
+		if ( null === $rel ) {
+			return null;
+		}
+		$candidates = array( $this->dir . '/' . $rel );
+		if ( preg_match( '/\.webp$/i', $rel ) ) {
+			foreach ( array( 'png', 'jpg', 'jpeg' ) as $ext ) {
+				$candidates[] = $this->dir . '/' . preg_replace( '/\.webp$/i', '.' . $ext, $rel );
+			}
+		}
+		foreach ( $candidates as $file ) {
+			if ( file_exists( $file ) ) {
+				$size = @getimagesize( $file );
+				if ( is_array( $size ) && $size[0] > 0 && $size[1] > 0 ) {
+					return array( $size[0], $size[1] );
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Preload dei font critici configurati + preconnect a Google Fonts se
+	 * la pagina lo usa (PageSpeed: "albero delle dipendenze di rete").
+	 */
+	private function inject_preloads( DOMDocument $dom, $original_html ) {
+		$head = $dom->getElementsByTagName( 'head' )->item( 0 );
+		if ( ! $head ) {
+			return;
+		}
+
+		$existing = array();
+		foreach ( $head->getElementsByTagName( 'link' ) as $link ) {
+			$existing[ strtolower( $link->getAttribute( 'rel' ) . '|' . $link->getAttribute( 'href' ) ) ] = 1;
+		}
+		$to_insert = array();
+
+		// Preconnect a Google Fonts quando referenziato.
+		if ( false !== stripos( $original_html, 'fonts.googleapis.com' ) || false !== stripos( $original_html, 'fonts.gstatic.com' ) ) {
+			foreach ( array( 'https://fonts.googleapis.com' => false, 'https://fonts.gstatic.com' => true ) as $origin => $cross ) {
+				if ( isset( $existing[ 'preconnect|' . $origin ] ) ) {
+					continue;
+				}
+				$node = $dom->createElement( 'link' );
+				$node->setAttribute( 'rel', 'preconnect' );
+				$node->setAttribute( 'href', $origin );
+				if ( $cross ) {
+					$node->setAttribute( 'crossorigin', '' );
+				}
+				$to_insert[] = $node;
+			}
+		}
+
+		// Preload dei font indicati nelle impostazioni.
+		$fonts = isset( $this->opts['preload_fonts'] ) && is_array( $this->opts['preload_fonts'] ) ? $this->opts['preload_fonts'] : array();
+		foreach ( $fonts as $href ) {
+			if ( isset( $existing[ 'preload|' . strtolower( $href ) ] ) ) {
+				continue;
+			}
+			$node = $dom->createElement( 'link' );
+			$node->setAttribute( 'rel', 'preload' );
+			$node->setAttribute( 'href', $href );
+			$node->setAttribute( 'as', 'font' );
+			if ( preg_match( '/\.woff2(\?|$)/i', $href ) ) {
+				$node->setAttribute( 'type', 'font/woff2' );
+			}
+			$node->setAttribute( 'crossorigin', '' );
+			$to_insert[] = $node;
+		}
+
+		foreach ( array_reverse( $to_insert ) as $node ) {
+			$head->insertBefore( $node, $head->firstChild );
+		}
+	}
+
+	/**
+	 * Risolve un href interno (assoluto, root-relative o relativo) nel path
+	 * del file dentro l'export; null se esterno o non risolvibile.
+	 */
+	private function href_to_relpath( $href, $page_rel ) {
+		$href = html_entity_decode( trim( (string) $href ) );
+		$href = preg_replace( '/[#?].*$/', '', $href );
+		if ( '' === $href || preg_match( '#^(data:|mailto:|tel:|javascript:)#i', $href ) ) {
+			return null;
+		}
+
+		$parts = wp_parse_url( $href );
+		if ( ! empty( $parts['host'] ) ) {
+			$host     = strtolower( $parts['host'] );
+			$internal = array_filter( array(
+				strtolower( (string) ( $this->opts['source_host'] ?? '' ) ),
+				strtolower( (string) ( $this->opts['target_host'] ?? '' ) ),
+			) );
+			if ( ! in_array( $host, $internal, true ) ) {
+				return null;
+			}
+		}
+
+		$path = $parts['path'] ?? '';
+		if ( '' === $path ) {
+			return null;
+		}
+		if ( '/' === $path[0] ) {
+			$target = ltrim( $path, '/' );
+		} else {
+			$base   = dirname( $page_rel );
+			$target = ( '.' === $base ? '' : $base . '/' ) . $path;
+		}
+
+		$out = array();
+		foreach ( explode( '/', str_replace( '\\', '/', $target ) ) as $segment ) {
+			if ( '' === $segment || '.' === $segment ) {
+				continue;
+			}
+			if ( '..' === $segment ) {
+				array_pop( $out );
+				continue;
+			}
+			$out[] = $segment;
+		}
+		return $out ? implode( '/', $out ) : null;
+	}
+
+	/* ------------------------------------------------------------------ */
 	/* Pulizia HTML (port di pulisci_codice_html)                            */
 	/* ------------------------------------------------------------------ */
 
-	public function clean_html( $html ) {
+	public function clean_html( $html, $page_rel = 'index.html' ) {
 		$remove_js = empty( $this->opts['keep_js'] );
 
 		$dom = new DOMDocument();
@@ -429,6 +690,21 @@ class SED_Optimizer {
 
 				if ( ( $is_modulepreload || $is_script_pre || $points_to_js ) && ! $this->matches_allowlist( $href ) ) {
 					$node->parentNode->removeChild( $node );
+				}
+			}
+		}
+
+		// 3b) Incorpora i CSS interni piccoli (toglie richieste render-blocking).
+		if ( ! empty( $this->opts['perf_inline_css'] ) ) {
+			$this->inline_small_css( $dom, $page_rel );
+		}
+
+		// 3c) font-display:swap negli <style> della pagina.
+		if ( ! empty( $this->opts['perf_font_display'] ) ) {
+			foreach ( $dom->getElementsByTagName( 'style' ) as $style_node ) {
+				$fixed = $this->fix_font_display( $style_node->nodeValue );
+				if ( $fixed !== $style_node->nodeValue ) {
+					$style_node->nodeValue = $fixed;
 				}
 			}
 		}
@@ -528,6 +804,11 @@ class SED_Optimizer {
 			}
 		}
 
+		// 5c) width/height, lazy-load e priorita' LCP sulle immagini.
+		if ( ! empty( $this->opts['perf_img_attrs'] ) ) {
+			$this->enhance_images( $dom, $page_rel );
+		}
+
 		// 6) Minificazione conservativa: collassa gli spazi nei nodi testo,
 		// preservando pre/textarea/style/script (JSON-LD).
 		$text_nodes = $xpath->query( '//text()[not(ancestor::pre) and not(ancestor::textarea) and not(ancestor::style) and not(ancestor::script)]' );
@@ -545,6 +826,9 @@ class SED_Optimizer {
 		// 6c) Rete di sicurezza anti mixed-content: il browser aggiorna da
 		// solo a https qualsiasi risorsa http residua (anche esterna).
 		$this->inject_upgrade_insecure( $dom );
+
+		// 6d) Preload font critici + preconnect Google Fonts.
+		$this->inject_preloads( $dom, $html );
 
 		$out = $dom->saveHTML();
 		$out = str_replace( '<?xml encoding="UTF-8">', '', $out );

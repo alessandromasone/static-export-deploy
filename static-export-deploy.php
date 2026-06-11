@@ -3,7 +3,7 @@
  * Plugin Name:       Static Export & Deploy
  * Plugin URI:        https://github.com/alessandromasone/static-export-deploy
  * Description:       Esporta il sito in HTML statico (crawler integrato, compatibile WPLingua), lo ottimizza (WebP, pulizia HTML/SEO, GA4/AdSense) e lo pubblica su GitHub (branch raw + main) — tutto in background.
- * Version:           1.7.1
+ * Version:           1.8.0
  * Author:            Alessandro Masone
  * License:           GPL-2.0-or-later
  * Text Domain:       static-export-deploy
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SED_VERSION', '1.7.1' );
+define( 'SED_VERSION', '1.8.0' );
 define( 'SED_PLUGIN_FILE', __FILE__ );
 define( 'SED_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SED_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

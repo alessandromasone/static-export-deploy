@@ -3,6 +3,10 @@
 Tutte le modifiche rilevanti di questo progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.8.0] - 2026-06-11
+### Aggiunto
+- Modulo **prestazioni** (Core Web Vitals): CSS interni piccoli (≤15 KiB) incorporati nelle pagine con riscrittura degli `url()` relativi; `font-display: swap` nei `@font-face` che non lo dichiarano; `width`/`height` automatici sulle immagini, `loading=lazy`/`decoding=async` con `fetchpriority=high` sulla prima immagine; preload dei font critici configurabile e preconnect automatico a Google Fonts.
+
 ## [1.7.1] - 2026-06-11
 ### Modificato
 - Suggerimenti, placeholder ed esempi resi completamente generici (nessun riferimento a domini o account reali).

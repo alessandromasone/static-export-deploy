@@ -4,7 +4,7 @@ Tags: static site, export, github, webp, seo
 Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.7.1
+Stable tag: 1.8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,7 +22,8 @@ Static Export & Deploy trasforma il tuo sito WordPress (anche multilingua con WP
   * **ads.txt** — esportato se presente, altrimenti generato automaticamente dall'ID AdSense;
   * sostituzione del **sottodominio di staging** con quello di produzione (es. `admin.sito.com` → `www.sito.com`) e **HTTPS forzato** su tutti gli URL interni (niente mixed content) in HTML, CSS, JSON, sitemap;
   * sitemap ripulite dai feed e `robots.txt` riscritto;
-  * iniezione di **Google Analytics 4** e **Google AdSense**.
+  * iniezione di **Google Analytics 4** e **Google AdSense**;
+  * **prestazioni Core Web Vitals**: CSS piccoli inlinati, font-display:swap, dimensioni immagini automatiche, lazy-load con priorita' LCP, preload font critici.
 * **Audit finale** — report scaricabile con link/risorse interne rotte e controlli SEO (title, meta description, canonical, H1, lang, alt, URL di staging residui).
 * **Deploy su GitHub via API, veloce** (nessun git richiesto sul server): branch `raw` con l'export originale e branch `main` con il sito ottimizzato. Gli SHA git vengono calcolati in locale e confrontati con il repository: **vengono caricati solo i file nuovi o modificati**, in parallelo. README, .gitignore e CNAME vengono preservati; push saltato se non ci sono modifiche; **rate limit API gestito automaticamente** (pausa e ripresa dopo il reset).
 * **Tutto in background** — pipeline a lotti con ripresa automatica e watchdog WP-Cron: puoi chiudere la pagina, il server continua a lavorare. Export manuale o pianificato (giornaliero/settimanale).
@@ -48,6 +49,9 @@ Si': le lingue di WPLingua vengono rilevate automaticamente (e sono comunque sco
 Di default viene rimosso completamente (restano solo i dati strutturati JSON-LD e i tag GA4/AdSense iniettati). Puoi mantenerlo con un'opzione.
 
 == Changelog ==
+
+= 1.8.0 =
+* Modulo prestazioni (Core Web Vitals, basato sui rilievi di PageSpeed): CSS interni piccoli (<=15 KiB) incorporati nelle pagine con riscrittura degli url() relativi (elimina richieste render-blocking); font-display:swap iniettato nei @font-face che non lo dichiarano (CSS e <style>); width/height automatici sulle immagini che ne sono prive + loading=lazy/decoding=async con fetchpriority=high sulla prima immagine (riduce CLS e migliora LCP); campo per il preload dei font critici e preconnect automatico a Google Fonts quando usato. Tutto attivo di default e disattivabile nelle impostazioni.
 
 = 1.7.1 =
 * Placeholder ed esempi resi generici; aggiunti file di repository (README, CHANGELOG, LICENSE, workflow di release).

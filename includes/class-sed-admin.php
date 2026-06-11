@@ -640,6 +640,24 @@ class SED_Admin {
 					</td>
 				</tr>
 				<tr>
+					<th scope="row">Prestazioni</th>
+					<td>
+						<fieldset>
+							<label><input type="checkbox" name="perf_inline_css" value="1" <?php checked( $s['perf_inline_css'] ); ?> /> Incorpora i CSS interni piccoli (&le;15&nbsp;KiB) nelle pagine</label><br />
+							<label><input type="checkbox" name="perf_font_display" value="1" <?php checked( $s['perf_font_display'] ); ?> /> Aggiungi <code>font-display: swap</code> ai font che non lo dichiarano</label><br />
+							<label><input type="checkbox" name="perf_img_attrs" value="1" <?php checked( $s['perf_img_attrs'] ); ?> /> Immagini: <code>width</code>/<code>height</code> automatici, lazy-load e priorit&agrave; LCP</label>
+						</fieldset>
+						<p class="description">Contromisure per PageSpeed: richieste render-blocking, testo invisibile durante il caricamento dei font, layout shift (CLS) e priorit&agrave; dell'immagine principale.</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="preload_fonts">Font da precaricare</label></th>
+					<td>
+						<textarea id="preload_fonts" name="preload_fonts" rows="2" class="large-text code" placeholder="/wp-content/themes/tema/assets/fonts/principale.woff2"><?php echo esc_textarea( $s['preload_fonts'] ); ?></textarea>
+						<p class="description">Path o URL dei font critici (uno per riga): in ogni pagina viene iniettato <code>&lt;link rel="preload" as="font"&gt;</code>, accorciando la catena di caricamento. Indica solo i font usati ovunque (es. quello del testo principale).</p>
+					</td>
+				</tr>
+				<tr>
 					<th scope="row"><label for="ga_id">Google Analytics</label></th>
 					<td>
 						<input type="text" id="ga_id" name="ga_id" value="<?php echo esc_attr( $s['ga_id'] ); ?>" class="regular-text" placeholder="G-XXXXXXXXXX" />

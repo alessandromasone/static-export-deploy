@@ -31,6 +31,10 @@ class SED_Settings {
 			'ga_id'           => '',
 			'adsense_id'      => '',
 			'webp_quality'    => 80,
+			'perf_inline_css' => 1,           // Incorpora i CSS interni piccoli (render-blocking).
+			'perf_font_display' => 1,         // font-display:swap nei @font-face.
+			'perf_img_attrs'  => 1,           // width/height + lazy-load + priorita' LCP sulle immagini.
+			'preload_fonts'   => '',          // Font critici da precaricare (uno per riga).
 			'keep_js'         => 0,           // Default: JS rimosso (tranne JSON-LD + GA4/AdSense + whitelist).
 			'js_allowlist'    => "fuse.js\nfuse-js\nsfs-\nnew Fuse(", // Script preservati anche con keep_js=0.
 			'ads_txt'         => 1,           // Genera ads.txt dall'ID AdSense se assente.
@@ -88,6 +92,10 @@ class SED_Settings {
 		$new['ga_id']          = sanitize_text_field( $input['ga_id'] ?? '' );
 		$new['adsense_id']     = self::normalize_adsense( sanitize_text_field( $input['adsense_id'] ?? '' ) );
 		$new['webp_quality']   = min( 100, max( 1, absint( $input['webp_quality'] ?? 80 ) ) );
+		$new['perf_inline_css']   = empty( $input['perf_inline_css'] ) ? 0 : 1;
+		$new['perf_font_display'] = empty( $input['perf_font_display'] ) ? 0 : 1;
+		$new['perf_img_attrs']    = empty( $input['perf_img_attrs'] ) ? 0 : 1;
+		$new['preload_fonts']     = sanitize_textarea_field( $input['preload_fonts'] ?? '' );
 		$new['keep_js']        = empty( $input['keep_js'] ) ? 0 : 1;
 		$new['js_allowlist']   = sanitize_textarea_field( $input['js_allowlist'] ?? '' );
 		$new['ads_txt']        = empty( $input['ads_txt'] ) ? 0 : 1;
@@ -590,6 +598,20 @@ class SED_Settings {
 	 * quando il JavaScript viene rimosso: confrontati con src, id e contenuto
 	 * di ogni <script>. Default pensati per wp-static-fuse-search.
 	 */
+	/**
+	 * Font critici da precaricare in ogni pagina (path o URL, uno per riga).
+	 */
+	public static function preload_fonts_list() {
+		$out = array();
+		foreach ( preg_split( '/\r\n|\r|\n/', (string) self::get( 'preload_fonts' ) ) as $row ) {
+			$row = trim( $row );
+			if ( '' !== $row ) {
+				$out[] = $row;
+			}
+		}
+		return $out;
+	}
+
 	public static function js_allowlist() {
 		$out = array();
 		foreach ( preg_split( '/\r\n|\r|\n/', (string) self::get( 'js_allowlist' ) ) as $row ) {
