@@ -615,6 +615,32 @@ class SED_Admin {
 				</tr>
 			</table>
 
+			<h2 class="title">Redirect</h2>
+			<p>Genera il file <code>_redirects</code> per Cloudflare Pages / Netlify, per non perdere il posizionamento dei vecchi URL quando il sito diventa statico.</p>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row">File <code>_redirects</code></th>
+					<td>
+						<label><input type="checkbox" name="redirects" value="1" <?php checked( $s['redirects'] ); ?> /> Genera <code>_redirects</code> nella root dell'export</label>
+						<p class="description">Le regole vengono raccolte automaticamente dai plugin di redirect installati (Redirection, Yoast SEO Premium, Rank Math) e dalle regole manuali qui sotto.</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">Permalink legacy</th>
+					<td>
+						<label><input type="checkbox" name="redirects_post_id" value="1" <?php checked( $s['redirects_post_id'] ); ?> /> Reindirizza <code>/?p=ID</code> ai permalink attuali</label>
+						<p class="description">Utile se il sito in passato usava i link di default di WordPress e potrebbero esistere vecchi link verso <code>/?p=123</code>.</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="redirects_manual">Regole manuali</label></th>
+					<td>
+						<textarea id="redirects_manual" name="redirects_manual" rows="5" class="large-text code" placeholder="/vecchio-percorso/ /nuovo-percorso/ 301&#10;/promo /landing/ 302&#10;/blog/* /articoli/:splat 301"><?php echo esc_textarea( $s['redirects_manual'] ); ?></textarea>
+						<p class="description">Una regola per riga, nel formato Cloudflare: <code>origine destinazione [codice]</code>. Sono ammessi i caratteri jolly <code>*</code> e i placeholder <code>:splat</code>. Hanno la precedenza sulle regole automatiche.</p>
+					</td>
+				</tr>
+			</table>
+
 			<h2 class="title">Ottimizzazione</h2>
 			<p>Cosa succede ai contenuti tra l'export e la pubblicazione sul branch ottimizzato.</p>
 			<table class="form-table" role="presentation">

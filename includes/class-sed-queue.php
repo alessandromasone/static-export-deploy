@@ -115,6 +115,9 @@ class SED_Queue {
 				'keep_js'      => $settings['keep_js'],
 				'js_allowlist' => SED_Settings::js_allowlist(),
 				'ads_txt'      => $settings['ads_txt'],
+				'redirects'         => $settings['redirects'],
+				'redirects_post_id' => $settings['redirects_post_id'],
+				'redirects_manual'  => $settings['redirects_manual'],
 				'make_zips'    => $settings['make_zips'],
 				'deploy_raw'   => $settings['deploy_raw'],
 				'branch_raw'   => $settings['branch_raw'],
@@ -373,6 +376,16 @@ class SED_Queue {
 
 				$optimizer = new SED_Optimizer( $job['dir'] . '/opt', $job['opts'] );
 				$optimizer->prepare_structure();
+
+				// File _redirects per Cloudflare Pages / Netlify (se abilitato):
+				// generato prima di ZIP e deploy cosi' finisce nell'export.
+				if ( ! empty( $job['opts']['redirects'] ) ) {
+					$redirects = new SED_Redirects( $job['opts'] );
+					$count     = $redirects->write( $job['dir'] . '/opt' );
+					SED_Logger::log( $count > 0
+						? 'File _redirects generato (' . $count . ' regole) per Cloudflare Pages / Netlify.'
+						: 'Nessuna regola di redirect trovata: _redirects non creato.' );
+				}
 
 				$files = $optimizer->list_files();
 				file_put_contents( $job['dir'] . '/optimize-files.json', wp_json_encode( array(

@@ -4,7 +4,7 @@ Tags: static site, export, github, webp, seo
 Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.8.0
+Stable tag: 1.9.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -49,6 +49,9 @@ Si': le lingue di WPLingua vengono rilevate automaticamente (e sono comunque sco
 Di default viene rimosso completamente (restano solo i dati strutturati JSON-LD e i tag GA4/AdSense iniettati). Puoi mantenerlo con un'opzione.
 
 == Changelog ==
+
+= 1.9.0 =
+* Generazione del file _redirects per Cloudflare Pages / Netlify (opzionale): raccoglie automaticamente le regole dai plugin di redirect (Redirection, Yoast SEO Premium, Rank Math), opzionale fallback /?p=ID -> permalink, piu' regole manuali nel formato Cloudflare (con caratteri jolly e :splat). Evita di perdere il posizionamento dei vecchi URL.
 
 = 1.8.0 =
 * Modulo prestazioni (Core Web Vitals, basato sui rilievi di PageSpeed): CSS interni piccoli (<=15 KiB) incorporati nelle pagine con riscrittura degli url() relativi (elimina richieste render-blocking); font-display:swap iniettato nei @font-face che non lo dichiarano (CSS e <style>); width/height automatici sulle immagini che ne sono prive + loading=lazy/decoding=async con fetchpriority=high sulla prima immagine (riduce CLS e migliora LCP); campo per il preload dei font critici e preconnect automatico a Google Fonts quando usato. Tutto attivo di default e disattivabile nelle impostazioni.

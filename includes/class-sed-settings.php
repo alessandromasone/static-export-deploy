@@ -38,6 +38,9 @@ class SED_Settings {
 			'keep_js'         => 0,           // Default: JS rimosso (tranne JSON-LD + GA4/AdSense + whitelist).
 			'js_allowlist'    => "fuse.js\nfuse-js\nsfs-\nnew Fuse(", // Script preservati anche con keep_js=0.
 			'ads_txt'         => 1,           // Genera ads.txt dall'ID AdSense se assente.
+			'redirects'        => 1,          // Genera il file _redirects (Cloudflare Pages / Netlify).
+			'redirects_post_id' => 0,         // Aggiungi i fallback /?p=ID -> permalink.
+			'redirects_manual' => '',         // Regole manuali nel formato Cloudflare.
 			'lang_slugs'      => '',          // Vuoto = auto da WPLingua.
 			'extra_urls'      => '',          // URL aggiuntivi da includere nel crawl (uno per riga).
 			'exclude_paths'   => '',          // Path da escludere (uno per riga, prefisso).
@@ -99,6 +102,9 @@ class SED_Settings {
 		$new['keep_js']        = empty( $input['keep_js'] ) ? 0 : 1;
 		$new['js_allowlist']   = sanitize_textarea_field( $input['js_allowlist'] ?? '' );
 		$new['ads_txt']        = empty( $input['ads_txt'] ) ? 0 : 1;
+		$new['redirects']         = empty( $input['redirects'] ) ? 0 : 1;
+		$new['redirects_post_id'] = empty( $input['redirects_post_id'] ) ? 0 : 1;
+		$new['redirects_manual']  = sanitize_textarea_field( $input['redirects_manual'] ?? '' );
 		$new['lang_slugs']     = sanitize_text_field( $input['lang_slugs'] ?? '' );
 		$new['extra_urls']     = sanitize_textarea_field( $input['extra_urls'] ?? '' );
 		$new['exclude_paths']  = sanitize_textarea_field( $input['exclude_paths'] ?? '' );
