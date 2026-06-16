@@ -7,8 +7,9 @@
  * Raccoglie le regole da piu' fonti, nell'ordine di precedenza con cui
  * vengono scritte (Cloudflare applica la prima corrispondenza):
  *   1. regole manuali dell'utente (gia' nel formato Cloudflare)
- *   2. plugin di redirect: Redirection, Yoast, Rank Math
- *   3. fallback per i permalink "brutti": /?p=ID -> permalink dei post
+ *   2. slug modificati: redirect nativi di WordPress (_wp_old_slug)
+ *   3. plugin di redirect: Redirection, Yoast, Rank Math
+ *   4. fallback per i permalink "brutti": /?p=ID -> permalink dei post
  *
  * Il file viene scritto nella root dell'export ottimizzato. Una riga per
  * regola: "<da> <a> <codice>". I duplicati di origine e le regole inutili
@@ -45,6 +46,7 @@ class SED_Redirects {
 		$this->lines = array();
 
 		$this->add_manual();
+		$this->add_wp_old_slugs();
 		$this->add_redirection_plugin();
 		$this->add_yoast();
 		$this->add_rankmath();
@@ -104,6 +106,62 @@ class SED_Redirects {
 			}
 		}
 		$this->lines[] = '';
+	}
+
+	/**
+	 * Redirect nativi di WordPress al cambio di slug.
+	 *
+	 * Quando si modifica lo slug di un post/pagina, WordPress conserva quello
+	 * vecchio nel meta `_wp_old_slug` e reindirizza automaticamente tramite
+	 * wp_old_slug_redirect(): comportamento che si perde nel sito statico.
+	 * Qui lo ricostruiamo come regole esplicite per Cloudflare/Netlify.
+	 *
+	 * Il vecchio URL si ottiene sostituendo SOLO l'ultimo segmento (lo slug)
+	 * nel permalink attuale, cosi' la gerarchia di pagine/cartelle e l'eventuale
+	 * prefisso lingua restano intatti. Un post puo' avere piu' `_wp_old_slug`.
+	 */
+	private function add_wp_old_slugs() {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$rows = $wpdb->get_results(
+			"SELECT p.ID, m.meta_value AS old_slug
+			 FROM {$wpdb->postmeta} m
+			 INNER JOIN {$wpdb->posts} p ON p.ID = m.post_id
+			 WHERE m.meta_key = '_wp_old_slug'
+			   AND p.post_status = 'publish'
+			   AND m.meta_value <> ''"
+		);
+		if ( ! $rows ) {
+			return;
+		}
+
+		$added = false;
+		foreach ( $rows as $row ) {
+			$new_path = $this->as_path( get_permalink( (int) $row->ID ) );
+			if ( '' === $new_path || '/' === $new_path ) {
+				continue;
+			}
+
+			// Sostituisce l'ultimo segmento del path con il vecchio slug,
+			// preservando query/trailing slash e tutta la parte precedente.
+			$old_slug = rawurlencode( $row->old_slug );
+			$old_slug = str_replace( '%2F', '/', $old_slug ); // Slug gerarchici rari.
+			$old_path = preg_replace( '#[^/]+/?$#', $old_slug . '/', $new_path );
+
+			if ( null === $old_path || $old_path === $new_path ) {
+				continue;
+			}
+
+			if ( ! $added ) {
+				$this->lines[] = '# Slug modificati (WordPress _wp_old_slug)';
+				$added         = true;
+			}
+			$this->add_rule( $old_path, $new_path, 301 );
+		}
+		if ( $added ) {
+			$this->lines[] = '';
+		}
 	}
 
 	/** Plugin "Redirection" (tabella {prefix}redirection_items). */

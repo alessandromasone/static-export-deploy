@@ -3,6 +3,10 @@
 Tutte le modifiche rilevanti di questo progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.9.1] - 2026-06-11
+### Aggiunto
+- Il file `_redirects` mappa ora anche i **redirect nativi di WordPress al cambio di slug** (meta `_wp_old_slug`): il vecchio URL viene ricostruito sostituendo l'ultimo segmento del permalink, preservando gerarchia e prefisso lingua. È la causa più comune di link rotti dopo l'esportazione statica.
+
 ## [1.9.0] - 2026-06-11
 ### Aggiunto
 - Generazione del file `_redirects` per **Cloudflare Pages / Netlify** (opzionale): regole raccolte automaticamente da Redirection, Yoast SEO Premium e Rank Math, fallback opzionale `/?p=ID` → permalink, e regole manuali nel formato Cloudflare (caratteri jolly e `:splat`). Evita di perdere il posizionamento dei vecchi URL.

@@ -622,7 +622,7 @@ class SED_Admin {
 					<th scope="row">File <code>_redirects</code></th>
 					<td>
 						<label><input type="checkbox" name="redirects" value="1" <?php checked( $s['redirects'] ); ?> /> Genera <code>_redirects</code> nella root dell'export</label>
-						<p class="description">Le regole vengono raccolte automaticamente dai plugin di redirect installati (Redirection, Yoast SEO Premium, Rank Math) e dalle regole manuali qui sotto.</p>
+						<p class="description">Mappa automaticamente i redirect nativi di WordPress al cambio di slug (<code>_wp_old_slug</code>) e quelli dei plugin installati (Redirection, Yoast SEO Premium, Rank Math), oltre alle regole manuali qui sotto.</p>
 					</td>
 				</tr>
 				<tr>
