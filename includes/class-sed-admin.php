@@ -652,6 +652,13 @@ class SED_Admin {
 					</td>
 				</tr>
 				<tr>
+					<th scope="row">Collegamenti WordPress</th>
+					<td>
+						<label><input type="checkbox" name="strip_wp_links" value="1" <?php checked( $s['strip_wp_links'] ); ?> /> Rimuovi i <code>&lt;link&gt;</code> inutili nel sito statico (oEmbed, REST API, feed RSS, RSD)</label>
+						<p class="description">Consigliato: sono inservibili senza WordPress dinamico. Gli oEmbed in particolare contengono URL dell'origine in forma codificata (<code>?url=http%3A%2F%2F…</code>), una causa comune di riferimenti al dominio di staging che &quot;sfuggono&quot; nell'export.</p>
+					</td>
+				</tr>
+				<tr>
 					<th scope="row"><label for="js_allowlist">Script da preservare</label></th>
 					<td>
 						<textarea id="js_allowlist" name="js_allowlist" rows="4" class="regular-text code"><?php echo esc_textarea( $s['js_allowlist'] ); ?></textarea>

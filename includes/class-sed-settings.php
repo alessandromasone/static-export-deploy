@@ -41,6 +41,7 @@ class SED_Settings {
 			'redirects'        => 1,          // Genera il file _redirects (Cloudflare Pages / Netlify).
 			'redirects_post_id' => 0,         // Aggiungi i fallback /?p=ID -> permalink.
 			'redirects_manual' => '',         // Regole manuali nel formato Cloudflare.
+			'strip_wp_links'   => 1,          // Rimuove oEmbed/wp-json/feed/RSD dal <head> (inutili nello statico).
 			'lang_slugs'      => '',          // Vuoto = auto da WPLingua.
 			'extra_urls'      => '',          // URL aggiuntivi da includere nel crawl (uno per riga).
 			'exclude_paths'   => '',          // Path da escludere (uno per riga, prefisso).
@@ -105,6 +106,7 @@ class SED_Settings {
 		$new['redirects']         = empty( $input['redirects'] ) ? 0 : 1;
 		$new['redirects_post_id'] = empty( $input['redirects_post_id'] ) ? 0 : 1;
 		$new['redirects_manual']  = sanitize_textarea_field( $input['redirects_manual'] ?? '' );
+		$new['strip_wp_links']    = empty( $input['strip_wp_links'] ) ? 0 : 1;
 		$new['lang_slugs']     = sanitize_text_field( $input['lang_slugs'] ?? '' );
 		$new['extra_urls']     = sanitize_textarea_field( $input['extra_urls'] ?? '' );
 		$new['exclude_paths']  = sanitize_textarea_field( $input['exclude_paths'] ?? '' );

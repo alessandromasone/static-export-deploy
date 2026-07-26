@@ -4,7 +4,7 @@ Tags: static site, export, github, webp, seo
 Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.9.1
+Stable tag: 1.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -49,6 +49,11 @@ Si': le lingue di WPLingua vengono rilevate automaticamente (e sono comunque sco
 Di default viene rimosso completamente (restano solo i dati strutturati JSON-LD e i tag GA4/AdSense iniettati). Puoi mantenerlo con un'opzione.
 
 == Changelog ==
+
+= 1.10.0 =
+* Corretto il "leak" del dominio di origine negli URL codificati (percent-encoding): i riferimenti come ?url=http%3A%2F%2Fadmin.dominio... (tipici degli oEmbed) ora vengono riscritti verso il dominio di produzione, sia con URL di produzione impostato sia con la sostituzione a sottodomini. Era una causa comune di mancata indicizzazione dei siti statici.
+* Nuova opzione (attiva di default): rimozione dei <link> inutili in un sito statico (oEmbed, REST API/wp-json, feed RSS, RSD/pingback, shortlink), che sono anche la fonte principale di quei riferimenti codificati.
+* Audit: il controllo [DOMINIO] rileva ora i residui dell'host di origine anche in forma percent-encoded.
 
 = 1.9.1 =
 * Il file _redirects mappa ora anche i redirect nativi di WordPress al cambio di slug (meta _wp_old_slug): il vecchio URL viene ricostruito preservando gerarchia e prefisso lingua. E' la causa piu' comune di link rotti dopo l'esportazione statica.

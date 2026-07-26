@@ -3,6 +3,13 @@
 Tutte le modifiche rilevanti di questo progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.10.0] - 2026-06-11
+### Corretto
+- "Leak" del dominio di origine negli URL **percent-encoded** (es. `?url=http%3A%2F%2Fadmin.dominio...` degli oEmbed): ora riscritti verso il dominio di produzione, sia con URL di produzione impostato sia con la sostituzione a sottodomini. Era una causa comune di mancata indicizzazione dei siti statici.
+### Aggiunto
+- Opzione (attiva di default) per **rimuovere i `<link>` inutili** in un sito statico: oEmbed, REST API (wp-json), feed RSS, RSD/pingback, shortlink — anche fonte principale dei riferimenti codificati di cui sopra.
+- Audit: il controllo `[DOMINIO]` rileva i residui dell'host di origine anche in forma percent-encoded.
+
 ## [1.9.1] - 2026-06-11
 ### Aggiunto
 - Il file `_redirects` mappa ora anche i **redirect nativi di WordPress al cambio di slug** (meta `_wp_old_slug`): il vecchio URL viene ricostruito sostituendo l'ultimo segmento del permalink, preservando gerarchia e prefisso lingua. È la causa più comune di link rotti dopo l'esportazione statica.

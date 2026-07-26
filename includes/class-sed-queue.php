@@ -118,6 +118,7 @@ class SED_Queue {
 				'redirects'         => $settings['redirects'],
 				'redirects_post_id' => $settings['redirects_post_id'],
 				'redirects_manual'  => $settings['redirects_manual'],
+				'strip_wp_links'    => $settings['strip_wp_links'],
 				'make_zips'    => $settings['make_zips'],
 				'deploy_raw'   => $settings['deploy_raw'],
 				'branch_raw'   => $settings['branch_raw'],

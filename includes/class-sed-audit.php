@@ -33,7 +33,11 @@ class SED_Audit {
 			$this->https_regex = '#http:(\\\\?/\\\\?/)((?:[a-z0-9\-]+\.)*' . preg_quote( $opts['site_domain'], '#' ) . ')(?![a-z0-9\-.])#i';
 		}
 		if ( ! empty( $opts['target_host'] ) && ! empty( $opts['source_host'] ) && $opts['target_host'] !== $opts['source_host'] ) {
-			$this->source_host_regex = '/(?<![\w.\-])' . preg_quote( $opts['source_host'], '/' ) . '(?![a-z0-9\-.])/i';
+			// Host di origine sia in chiaro sia percent-encoded (%2E per il punto):
+			// intercetta anche i residui dentro i parametri url= degli oEmbed.
+			$host_plain = preg_quote( $opts['source_host'], '#' );
+			$host_enc   = str_replace( '\.', '(?:\.|%2E)', $host_plain );
+			$this->source_host_regex = '#(?<![\w.\-])' . $host_enc . '(?![a-z0-9\-.])#i';
 		}
 	}
 

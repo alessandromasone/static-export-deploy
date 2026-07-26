@@ -58,6 +58,9 @@ class SED_Optimizer {
 				// URL completi: http(s)://host e protocol-relative //host,
 				// incluse le forme escapate dei JSON (\/\/).
 				'url_regex'  => '#(https?:)?(\\\\?/\\\\?/)' . preg_quote( $opts['source_host'], '#' ) . '(?![a-z0-9\-.])#i',
+				// Forma percent-encoded (%3A%2F%2F) dentro i parametri url= (es.
+				// oEmbed): e' la falla piu' subdola, sfugge alle regex sopra.
+				'enc_regex'  => '#(https?)(%3A%2F%2F)' . preg_quote( $opts['source_host'], '#' ) . '(?![a-z0-9\-.])#i',
 				// Host "nudo" nel testo (JSON-LD, meta, email sul dominio...).
 				'bare_regex' => '/(?<![\w.\-])' . preg_quote( $opts['source_host'], '/' ) . '(?![a-z0-9\-.])/i',
 			);
@@ -106,6 +109,11 @@ class SED_Optimizer {
 				return $map['scheme'] . ':' . $m[2] . $map['host'];
 			}
 			return $m[2] . $map['host']; // Protocol-relative: resta tale.
+		}, $content );
+		// Forma percent-encoded (%3A%2F%2F): forza https e preserva il case
+		// del separatore; il resto dell'URL codificato resta intatto.
+		$content = preg_replace_callback( $map['enc_regex'], function ( $m ) use ( $map ) {
+			return $map['scheme'] . $m[2] . $map['host'];
 		}, $content );
 		return preg_replace( $map['bare_regex'], $map['host'], $content );
 	}
@@ -312,8 +320,15 @@ class SED_Optimizer {
 	 * http/https, protocol-relative, URL escapati in JSON e occorrenze nude).
 	 */
 	public function replace_staging_domain( $content ) {
-		$prod = $this->opts['sub_prod'];
-		return preg_replace( $this->staging_regex, $prod . '.$1', $content );
+		$prod    = $this->opts['sub_prod'];
+		$content = preg_replace( $this->staging_regex, $prod . '.$1', $content );
+
+		// Forma percent-encoded del sottodominio dentro i parametri url=
+		// (es. oEmbed): il sottodominio e' preceduto da un delimitatore di URL
+		// (%2F slash-encoded, '=' dopo url=, o inizio). Il punto del dominio
+		// puo' essere letterale o %2E; il TLD viene preservato.
+		$enc = '#(%2F|=|^)' . preg_quote( $this->opts['sub_staging'], '#' ) . '((?:%2E|\.)[a-z0-9\-]+(?:(?:%2E|\.)[a-z0-9\-]+)+)#i';
+		return preg_replace( $enc, '$1' . $prod . '$2', $content );
 	}
 
 	/**
@@ -705,6 +720,28 @@ class SED_Optimizer {
 				$fixed = $this->fix_font_display( $style_node->nodeValue );
 				if ( $fixed !== $style_node->nodeValue ) {
 					$style_node->nodeValue = $fixed;
+				}
+			}
+		}
+
+		// 3d) Rimuove i <link> inutili (e dannosi) in un sito statico: oEmbed,
+		// REST (wp-json), feed RSS, EditURI/RSD, shortlink. Gli oEmbed in
+		// particolare incapsulano URL dell'origine in forma percent-encoded
+		// (?url=http%3A%2F%2F...), fonte tipica di "leak" del dominio di staging.
+		if ( ! empty( $this->opts['strip_wp_links'] ) ) {
+			foreach ( iterator_to_array( $dom->getElementsByTagName( 'link' ) ) as $node ) {
+				$rel  = strtolower( trim( $node->getAttribute( 'rel' ) ) );
+				$type = strtolower( trim( $node->getAttribute( 'type' ) ) );
+				$href = $node->getAttribute( 'href' );
+
+				$is_oembed  = false !== strpos( $type, 'oembed' ) || false !== strpos( $href, 'oembed' );
+				$is_restapi = 'https://api.w.org/' === $node->getAttribute( 'rel' ) || false !== strpos( $href, '/wp-json' );
+				$is_feed    = false !== strpos( $type, 'rss+xml' ) || false !== strpos( $type, 'atom+xml' ) || 'alternate' === $rel && false !== strpos( $href, '/feed' );
+				$is_rsd     = in_array( $rel, array( 'edituri', 'wlwmanifest', 'pingback' ), true );
+				$is_short   = in_array( $rel, array( 'shortlink' ), true );
+
+				if ( $is_oembed || $is_restapi || $is_feed || $is_rsd || $is_short ) {
+					$node->parentNode->removeChild( $node );
 				}
 			}
 		}
