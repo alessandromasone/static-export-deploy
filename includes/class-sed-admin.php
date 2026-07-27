@@ -706,6 +706,39 @@ class SED_Admin {
 				</tr>
 			</table>
 
+			<h2 class="title">Indicizzazione (SEO)</h2>
+			<p>Concentra l'indicizzazione di Google su articoli, pagine e categorie, escludendo gli archivi che duplicano contenuti. Tutte le opzioni sono facoltative.</p>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row">Archivio autore</th>
+					<td>
+						<label><input type="checkbox" name="seo_noindex_author" value="1" <?php checked( $s['seo_noindex_author'] ); ?> /> <code>noindex</code> su tutto l'archivio autore</label>
+						<p class="description">Consigliato per i blog mono-autore: l'archivio autore duplica ci&ograve; che &egrave; gi&agrave; nelle categorie. Rimuove anche <code>wp-sitemap-users-*.xml</code> dalla sitemap.</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">Paginazione</th>
+					<td>
+						<label><input type="checkbox" name="seo_noindex_paged" value="1" <?php checked( $s['seo_noindex_paged'] ); ?> /> <code>noindex, follow</code> sulle pagine oltre la prima (<code>/page/2/</code>, <code>/page/3/</code>&hellip;)</label>
+						<p class="description">Le pagine di paginazione di categorie, tag e archivi non aggiungono contenuto indicizzabile; <code>follow</code> lascia comunque scansionare i link agli articoli.</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">Canonical paginazione</th>
+					<td>
+						<label><input type="checkbox" name="seo_canonical_page1" value="1" <?php checked( $s['seo_canonical_page1'] ); ?> /> Punta il canonical delle pagine paginate alla pagina 1</label>
+						<p class="description">Consolida il valore SEO sulla prima pagina dell'archivio. Da valutare: alcuni preferiscono il canonical autoreferenziale &mdash; attivalo solo se sai perch&eacute;.</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">Sitemap utenti</th>
+					<td>
+						<label><input type="checkbox" name="seo_drop_users_sitemap" value="1" <?php checked( $s['seo_drop_users_sitemap'] ); ?> /> Rimuovi <code>wp-sitemap-users-*.xml</code> dalla sitemap</label>
+						<p class="description">Utile anche senza il <code>noindex</code> autore, se vuoi solo togliere la sitemap degli utenti da quella inviata a Google.</p>
+					</td>
+				</tr>
+			</table>
+
 			<h2 class="title">Crawler e lingue</h2>
 			<p>Cosa includere nell'export. Sitemap (anche annidate), pagina 404 e lingue WPLingua sono gestite automaticamente.</p>
 			<table class="form-table" role="presentation">

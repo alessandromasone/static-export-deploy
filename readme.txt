@@ -4,7 +4,7 @@ Tags: static site, export, github, webp, seo
 Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.10.0
+Stable tag: 1.11.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -49,6 +49,9 @@ Si': le lingue di WPLingua vengono rilevate automaticamente (e sono comunque sco
 Di default viene rimosso completamente (restano solo i dati strutturati JSON-LD e i tag GA4/AdSense iniettati). Puoi mantenerlo con un'opzione.
 
 == Changelog ==
+
+= 1.11.0 =
+* Nuova sezione Indicizzazione (SEO), tutte le opzioni facoltative: noindex sull'intero archivio autore (con rimozione della sitemap utenti), noindex,follow sulle pagine di paginazione oltre la prima, canonical delle pagine paginate verso pagina 1, e rimozione di wp-sitemap-users-*.xml dalla sitemap. Permette di concentrare l'indicizzazione di Google su articoli, pagine e categorie. Riconosce il prefisso lingua nei percorsi.
 
 = 1.10.0 =
 * Corretto il "leak" del dominio di origine negli URL codificati (percent-encoding): i riferimenti come ?url=http%3A%2F%2Fadmin.dominio... (tipici degli oEmbed) ora vengono riscritti verso il dominio di produzione, sia con URL di produzione impostato sia con la sostituzione a sottodomini. Era una causa comune di mancata indicizzazione dei siti statici.

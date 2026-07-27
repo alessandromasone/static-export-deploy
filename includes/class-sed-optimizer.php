@@ -151,6 +151,14 @@ class SED_Optimizer {
 		// Rimozione ricorsiva delle cartelle inutili.
 		$this->remove_dirs_named( array( 'feed', 'wp-json' ) );
 
+		// Rimozione dei file sitemap esclusi (es. wp-sitemap-users-*.xml):
+		// oltre a toglierli dall'indice, si eliminano dal filesystem.
+		foreach ( $this->sitemap_excludes() as $needle ) {
+			foreach ( (array) glob( $this->dir . '/*' . $needle . '*.xml' ) as $file ) {
+				@unlink( $file );
+			}
+		}
+
 		// ads.txt: se il sito non lo espone gia', viene generato dall'ID
 		// AdSense configurato (formato standard IAB).
 		$this->ensure_ads_txt();
@@ -654,6 +662,130 @@ class SED_Optimizer {
 	}
 
 	/* ------------------------------------------------------------------ */
+	/* SEO archivi e paginazione                                            */
+	/* ------------------------------------------------------------------ */
+
+	/**
+	 * Classifica il tipo di pagina dal suo percorso, tenendo conto
+	 * dell'eventuale prefisso lingua (/en/, /fr/, ...).
+	 *
+	 * @return array ['type' => author|category|tag|paged|other, 'paged' => bool]
+	 */
+	private function classify_page( $page_rel ) {
+		// Percorso normalizzato senza /index.html e senza prefisso lingua.
+		$path = '/' . trim( str_replace( 'index.html', '', $page_rel ), '/' );
+		$path = rtrim( $path, '/' ) . '/';
+
+		$langs = isset( $this->opts['lang_slugs_list'] ) && is_array( $this->opts['lang_slugs_list'] ) ? $this->opts['lang_slugs_list'] : array();
+		foreach ( $langs as $slug ) {
+			if ( 0 === stripos( $path, '/' . $slug . '/' ) ) {
+				$path = substr( $path, strlen( $slug ) + 1 );
+				break;
+			}
+		}
+
+		$paged = (bool) preg_match( '#/page/\d+/#', $path );
+
+		$type = 'other';
+		if ( preg_match( '#/author/[^/]+/#', $path ) ) {
+			$type = 'author';
+		} elseif ( preg_match( '#/category/[^/]+/#', $path ) ) {
+			$type = 'category';
+		} elseif ( preg_match( '#/tag/[^/]+/#', $path ) ) {
+			$type = 'tag';
+		} elseif ( $paged ) {
+			$type = 'paged'; // /page/N/ della home o di un archivio senza prefisso noto.
+		}
+
+		return array( 'type' => $type, 'paged' => $paged );
+	}
+
+	/**
+	 * Applica le regole SEO su archivi e paginazione, secondo le opzioni:
+	 *  - noindex sull'intero archivio autore (blog mono-autore)
+	 *  - noindex,follow su categorie/tag/archivi paginati oltre pagina 1
+	 *  - canonical delle pagine paginate verso la pagina 1
+	 */
+	private function apply_archive_seo( DOMDocument $dom, $page_rel ) {
+		$info = $this->classify_page( $page_rel );
+		if ( 'other' === $info['type'] && ! $info['paged'] ) {
+			return;
+		}
+
+		$noindex_author = ! empty( $this->opts['seo_noindex_author'] ) && 'author' === $info['type'];
+		$noindex_paged  = ! empty( $this->opts['seo_noindex_paged'] ) && $info['paged'];
+
+		if ( $noindex_author || $noindex_paged ) {
+			$this->set_robots_noindex( $dom );
+		}
+
+		if ( ! empty( $this->opts['seo_canonical_page1'] ) && $info['paged'] ) {
+			$this->canonical_to_page1( $dom );
+		}
+	}
+
+	/**
+	 * Imposta (o crea) <meta name="robots"> a "noindex, follow", preservando
+	 * eventuali direttive max-* gia' presenti.
+	 */
+	private function set_robots_noindex( DOMDocument $dom ) {
+		$head  = $dom->getElementsByTagName( 'head' )->item( 0 );
+		if ( ! $head ) {
+			return;
+		}
+		$xpath = new DOMXPath( $dom );
+		$metas = $xpath->query( '//head/meta[translate(@name,"ROBTS","robts")="robots"]' );
+
+		$node = ( $metas && $metas->length ) ? $metas->item( 0 ) : null;
+		if ( ! $node ) {
+			$node = $dom->createElement( 'meta' );
+			$node->setAttribute( 'name', 'robots' );
+			$head->appendChild( $node );
+			$node->setAttribute( 'content', 'noindex, follow' );
+			return;
+		}
+
+		// Conserva le direttive max-* (snippet/image/video), rimpiazza index/follow.
+		$content = $node->getAttribute( 'content' );
+		$keep    = array();
+		foreach ( array_map( 'trim', explode( ',', $content ) ) as $dir ) {
+			if ( '' !== $dir && preg_match( '/^max-/i', $dir ) ) {
+				$keep[] = $dir;
+			}
+		}
+		array_unshift( $keep, 'noindex', 'follow' );
+		$node->setAttribute( 'content', implode( ', ', $keep ) );
+	}
+
+	/**
+	 * Riscrive il canonical di una pagina paginata verso la pagina 1
+	 * (rimuove il segmento /page/N/). Aggiorna anche og:url per coerenza.
+	 */
+	private function canonical_to_page1( DOMDocument $dom ) {
+		$xpath = new DOMXPath( $dom );
+
+		$links = $xpath->query( '//head/link[contains(translate(@rel,"CANONICAL","canonical"),"canonical")]' );
+		if ( $links && $links->length ) {
+			$link = $links->item( 0 );
+			$href = $link->getAttribute( 'href' );
+			$base = preg_replace( '#/page/\d+/?#', '/', $href );
+			if ( $base !== $href ) {
+				$link->setAttribute( 'href', $base );
+			}
+		}
+
+		$og = $xpath->query( '//head/meta[@property="og:url"]' );
+		if ( $og && $og->length ) {
+			$node = $og->item( 0 );
+			$val  = $node->getAttribute( 'content' );
+			$base = preg_replace( '#/page/\d+/?#', '/', $val );
+			if ( $base !== $val ) {
+				$node->setAttribute( 'content', $base );
+			}
+		}
+	}
+
+	/* ------------------------------------------------------------------ */
 	/* Pulizia HTML (port di pulisci_codice_html)                            */
 	/* ------------------------------------------------------------------ */
 
@@ -867,6 +999,10 @@ class SED_Optimizer {
 		// 6d) Preload font critici + preconnect Google Fonts.
 		$this->inject_preloads( $dom, $html );
 
+		// 6e) SEO archivi/paginazione: noindex autore, noindex paginazione,
+		// canonical delle pagine paginate verso pagina 1 (secondo le opzioni).
+		$this->apply_archive_seo( $dom, $page_rel );
+
 		$out = $dom->saveHTML();
 		$out = str_replace( '<?xml encoding="UTF-8">', '', $out );
 
@@ -986,11 +1122,32 @@ class SED_Optimizer {
 	public function clean_sitemap( $content ) {
 		$content = preg_replace( '#<url>\s*<loc>[^<]*/feed/(?:[^<]*)?</loc>.*?</url>#is', '', $content );
 		$content = preg_replace( '#<sitemap>\s*<loc>[^<]*/feed/(?:[^<]*)?</loc>.*?</sitemap>#is', '', $content );
+
+		// Rimuove dall'indice i riferimenti alle sitemap escluse (es. quella
+		// degli autori di WordPress, wp-sitemap-users-*.xml). I pattern sono
+		// confrontati con l'URL dentro <loc>.
+		foreach ( $this->sitemap_excludes() as $needle ) {
+			$q       = preg_quote( $needle, '#' );
+			$content = preg_replace( '#<sitemap>\s*<loc>[^<]*' . $q . '[^<]*</loc>.*?</sitemap>#is', '', $content );
+		}
+
 		$content = $this->apply_common_replacements( $content );
 		$rows    = array_filter( preg_split( '/\r\n|\r|\n/', $content ), function ( $row ) {
 			return '' !== trim( $row );
 		} );
 		return implode( "\n", $rows );
+	}
+
+	/**
+	 * Pattern di URL sitemap da escludere dall'indice e da eliminare come file.
+	 * "wp-sitemap-users" e' incluso quando l'opzione noindex autore e' attiva.
+	 */
+	private function sitemap_excludes() {
+		$out = array();
+		if ( ! empty( $this->opts['seo_noindex_author'] ) || ! empty( $this->opts['seo_drop_users_sitemap'] ) ) {
+			$out[] = 'wp-sitemap-users';
+		}
+		return $out;
 	}
 
 	public function clean_robots( $content ) {

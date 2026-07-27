@@ -3,6 +3,10 @@
 Tutte le modifiche rilevanti di questo progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/) e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.11.0] - 2026-06-11
+### Aggiunto
+- Sezione **Indicizzazione (SEO)** con quattro opzioni facoltative: `noindex` sull'intero archivio autore (blog mono-autore) con rimozione della sitemap utenti; `noindex, follow` sulle pagine di paginazione oltre la prima; canonical delle pagine paginate verso pagina 1; rimozione di `wp-sitemap-users-*.xml` dalla sitemap. Il riconoscimento del tipo di pagina tiene conto del prefisso lingua.
+
 ## [1.10.0] - 2026-06-11
 ### Corretto
 - "Leak" del dominio di origine negli URL **percent-encoded** (es. `?url=http%3A%2F%2Fadmin.dominio...` degli oEmbed): ora riscritti verso il dominio di produzione, sia con URL di produzione impostato sia con la sostituzione a sottodomini. Era una causa comune di mancata indicizzazione dei siti statici.
