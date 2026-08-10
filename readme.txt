@@ -4,7 +4,7 @@ Tags: static site, export, github, webp, seo
 Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.11.0
+Stable tag: 1.12.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -49,6 +49,9 @@ Si': le lingue di WPLingua vengono rilevate automaticamente (e sono comunque sco
 Di default viene rimosso completamente (restano solo i dati strutturati JSON-LD e i tag GA4/AdSense iniettati). Puoi mantenerlo con un'opzione.
 
 == Changelog ==
+
+= 1.12.0 =
+* Nuovo pulsante in dashboard "Scarica ZIP del plugin": genera al volo l'archivio installabile (la stessa struttura prodotta dalla GitHub Action) e lo scarica direttamente, senza dover configurare GitHub o pubblicare una release. Esclude automaticamente file di sviluppo e VCS.
 
 = 1.11.0 =
 * Nuova sezione Indicizzazione (SEO), tutte le opzioni facoltative: noindex sull'intero archivio autore (con rimozione della sitemap utenti), noindex,follow sulle pagine di paginazione oltre la prima, canonical delle pagine paginate verso pagina 1, e rimozione di wp-sitemap-users-*.xml dalla sitemap. Permette di concentrare l'indicizzazione di Google su articoli, pagine e categorie. Riconosce il prefisso lingua nei percorsi.
