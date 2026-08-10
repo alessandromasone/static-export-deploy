@@ -52,7 +52,7 @@ class SED_Queue {
 	 * @param string $trigger manual|scheduled.
 	 * @return array|WP_Error
 	 */
-	public static function start_job( $trigger = 'manual' ) {
+	public static function start_job( $trigger = 'manual', $force_zip_only = false ) {
 		$current = self::get_job();
 		if ( $current && 'running' === $current['status'] ) {
 			return new WP_Error( 'sed_busy', 'Un export e\' gia\' in corso.' );
@@ -60,8 +60,9 @@ class SED_Queue {
 
 		// Validazioni preliminari: token e repository servono solo se il
 		// deploy su GitHub e' attivo. In modalita' "solo export/ZIP" si procede
-		// anche senza credenziali.
-		$deploy_enabled = (bool) SED_Settings::get( 'deploy_enabled' );
+		// anche senza credenziali. Il pulsante "Esporta solo ZIP" forza questa
+		// modalita' per la singola esecuzione, a prescindere dall'impostazione.
+		$deploy_enabled = ! $force_zip_only && (bool) SED_Settings::get( 'deploy_enabled' );
 		if ( $deploy_enabled ) {
 			$repo = SED_Settings::resolve_repo();
 			if ( '' === $repo || false === strpos( $repo, '/' ) ) {
@@ -129,8 +130,8 @@ class SED_Queue {
 				'seo_canonical_page1'    => $settings['seo_canonical_page1'],
 				'seo_drop_users_sitemap' => $settings['seo_drop_users_sitemap'],
 				'lang_slugs_list'        => SED_Settings::language_slugs(),
-				'make_zips'    => $settings['make_zips'],
-				'deploy_enabled' => $settings['deploy_enabled'],
+				'make_zips'    => $force_zip_only ? 1 : $settings['make_zips'],
+				'deploy_enabled' => $deploy_enabled ? 1 : 0,
 				'deploy_raw'   => $settings['deploy_raw'],
 				'branch_raw'   => $settings['branch_raw'],
 				'branch_main'  => $settings['branch_main'],

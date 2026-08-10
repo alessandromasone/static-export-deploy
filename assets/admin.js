@@ -17,6 +17,7 @@
 
 	function setRunningUI(running) {
 		$('#sed-start').prop('disabled', running || !isReady());
+		$('#sed-start-zip').prop('disabled', running);
 		$('#sed-cancel').toggle(running);
 	}
 
@@ -111,6 +112,20 @@
 					startPolling();
 				} else {
 					$btn.prop('disabled', !isReady());
+					var msg = (res && res.data && res.data.message) ? res.data.message : 'Errore di avvio.';
+					$('#sed-error').show().find('p').text(msg);
+				}
+			});
+		});
+
+		$('#sed-start-zip').on('click', function () {
+			var $btn = $(this).prop('disabled', true);
+			$.post(SED.ajaxUrl, { action: 'sed_start_zip', nonce: SED.nonce }, function (res) {
+				if (res && res.success) {
+					render(res.data);
+					startPolling();
+				} else {
+					$btn.prop('disabled', false);
 					var msg = (res && res.data && res.data.message) ? res.data.message : 'Errore di avvio.';
 					$('#sed-error').show().find('p').text(msg);
 				}

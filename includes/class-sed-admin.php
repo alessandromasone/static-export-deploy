@@ -16,11 +16,11 @@ class SED_Admin {
 		add_action( 'admin_init', array( __CLASS__, 'maybe_save_settings' ) );
 
 		add_action( 'wp_ajax_sed_start', array( __CLASS__, 'ajax_start' ) );
+		add_action( 'wp_ajax_sed_start_zip', array( __CLASS__, 'ajax_start_zip' ) );
 		add_action( 'wp_ajax_sed_cancel', array( __CLASS__, 'ajax_cancel' ) );
 		add_action( 'wp_ajax_sed_status', array( __CLASS__, 'ajax_status' ) );
 		add_action( 'admin_post_sed_download_report', array( __CLASS__, 'download_report' ) );
 		add_action( 'admin_post_sed_download_zip', array( __CLASS__, 'download_zip' ) );
-		add_action( 'admin_post_sed_build_plugin_zip', array( __CLASS__, 'build_plugin_zip' ) );
 		add_action( 'admin_post_sed_artifact_download', array( __CLASS__, 'artifact_download' ) );
 		add_action( 'admin_post_sed_artifact_delete', array( __CLASS__, 'artifact_delete' ) );
 	}
@@ -113,6 +113,16 @@ class SED_Admin {
 		wp_send_json_success( self::status_payload() );
 	}
 
+	public static function ajax_start_zip() {
+		self::check_ajax();
+		// Forza la modalita' solo export/ZIP: nessun deploy, nessuna credenziale.
+		$result = SED_Queue::start_job( 'manual', true );
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+		}
+		wp_send_json_success( self::status_payload() );
+	}
+
 	public static function ajax_cancel() {
 		self::check_ajax();
 		SED_Queue::cancel_job();
@@ -168,86 +178,6 @@ class SED_Admin {
 		header( 'Content-Type: text/plain; charset=utf-8' );
 		header( 'Content-Disposition: attachment; filename="sed-report-' . $job['id'] . '.txt"' );
 		readfile( $file );
-		exit;
-	}
-
-	/**
-	 * Crea al volo lo ZIP installabile del plugin (la stessa struttura che
-	 * produrrebbe la GitHub Action) e lo invia in download, senza bisogno di
-	 * GitHub. Utile per installare o distribuire il plugin manualmente.
-	 *
-	 * Lo ZIP contiene una cartella radice "static-export-deploy/" con tutti i
-	 * sorgenti; le cartelle di sviluppo e i file nascosti vengono esclusi.
-	 */
-	public static function build_plugin_zip() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( 'Permessi insufficienti.' );
-		}
-		check_admin_referer( 'sed_build_zip' );
-
-		if ( ! class_exists( 'ZipArchive' ) ) {
-			wp_die( 'Estensione PHP Zip non disponibile su questo server: impossibile creare lo ZIP.' );
-		}
-
-		$src  = untrailingslashit( SED_PLUGIN_DIR );
-		$slug = basename( $src ); // static-export-deploy
-		$tmp  = wp_tempnam( 'sed-plugin-zip' );
-
-		$zip = new ZipArchive();
-		if ( true !== $zip->open( $tmp, ZipArchive::CREATE | ZipArchive::OVERWRITE ) ) {
-			wp_die( 'Impossibile creare l\'archivio temporaneo.' );
-		}
-
-		// Percorsi da escludere dal pacchetto (sviluppo/VCS/artefatti).
-		$skip_dir  = array( '.git', '.github', 'node_modules', 'vendor', '.vscode', '.idea' );
-		$skip_file = array( '.gitignore', '.gitattributes', '.DS_Store' );
-
-		$iterator = new RecursiveIteratorIterator(
-			new RecursiveDirectoryIterator( $src, FilesystemIterator::SKIP_DOTS ),
-			RecursiveIteratorIterator::SELF_FIRST
-		);
-
-		foreach ( $iterator as $file ) {
-			$path = $file->getPathname();
-			$rel  = ltrim( str_replace( $src, '', $path ), '/\\' );
-			$rel  = str_replace( '\\', '/', $rel );
-
-			// Salta se un qualunque segmento del percorso e' in blacklist.
-			$segments = explode( '/', $rel );
-			if ( array_intersect( $segments, $skip_dir ) ) {
-				continue;
-			}
-			if ( in_array( basename( $rel ), $skip_file, true ) ) {
-				continue;
-			}
-			// Non includere lo ZIP eventualmente generato in precedenza.
-			if ( preg_match( '/\.zip$/i', $rel ) ) {
-				continue;
-			}
-
-			$zip_path = $slug . '/' . $rel;
-			if ( $file->isDir() ) {
-				$zip->addEmptyDir( $zip_path );
-			} else {
-				$zip->addFile( $path, $zip_path );
-			}
-		}
-
-		$version = defined( 'SED_VERSION' ) ? SED_VERSION : '';
-		$zip->close();
-
-		$download = $slug . ( $version ? '-' . $version : '' ) . '.zip';
-
-		@set_time_limit( 0 );
-		while ( ob_get_level() ) {
-			ob_end_clean();
-		}
-		nocache_headers();
-		header( 'Content-Type: application/zip' );
-		header( 'Content-Length: ' . filesize( $tmp ) );
-		header( 'Content-Disposition: attachment; filename="' . $download . '"' );
-		readfile( $tmp );
-		@unlink( $tmp );
 		exit;
 	}
 
@@ -535,8 +465,14 @@ class SED_Admin {
 
 					<p class="sed-actions">
 						<button class="button button-primary" id="sed-start" data-ready="<?php echo $ready ? '1' : '0'; ?>" <?php disabled( ! $ready || $running ); ?>><?php echo $deploy_on ? 'Avvia export &amp; deploy' : 'Avvia export (solo ZIP)'; ?></button>
+						<?php if ( $deploy_on ) : ?>
+							<button class="button" id="sed-start-zip" <?php disabled( $running ); ?>>Esporta solo ZIP</button>
+						<?php endif; ?>
 						<button class="button button-link-delete" id="sed-cancel" <?php echo $running ? '' : 'style="display:none"'; ?>>Annulla</button>
 					</p>
+					<?php if ( $deploy_on ) : ?>
+						<p class="description">&laquo;Esporta solo ZIP&raquo; genera l'archivio del sito senza pubblicarlo su GitHub: non serve alcuna configurazione.</p>
+					<?php endif; ?>
 
 					<p id="sed-downloads">
 						<a class="button" id="sed-report-link" style="display:none" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=sed_download_report' ), 'sed_report' ) ); ?>">Report SEO</a>
@@ -591,11 +527,7 @@ class SED_Admin {
 							<td><?php echo 'manual' === $settings['schedule'] ? 'manuale' : ( 'daily' === $settings['schedule'] ? 'giornaliera' : 'settimanale' ); ?></td>
 						</tr>
 					</table>
-					<p>
-						<a class="button" href="<?php echo esc_url( $settings_url ); ?>">Modifica impostazioni</a>
-						<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=sed_build_plugin_zip' ), 'sed_build_zip' ) ); ?>">Scarica ZIP del plugin</a>
-					</p>
-					<p class="description">Genera al volo l'archivio installabile del plugin (versione <?php echo esc_html( SED_VERSION ); ?>), senza passare da GitHub.</p>
+					<p><a class="button" href="<?php echo esc_url( $settings_url ); ?>">Modifica impostazioni</a></p>
 				</div>
 			</div>
 

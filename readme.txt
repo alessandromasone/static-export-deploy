@@ -4,7 +4,7 @@ Tags: static site, export, github, webp, seo
 Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.13.0
+Stable tag: 1.14.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -49,6 +49,10 @@ Si': le lingue di WPLingua vengono rilevate automaticamente (e sono comunque sco
 Di default viene rimosso completamente (restano solo i dati strutturati JSON-LD e i tag GA4/AdSense iniettati). Puoi mantenerlo con un'opzione.
 
 == Changelog ==
+
+= 1.14.0 =
+* Nuovo pulsante "Esporta solo ZIP" in dashboard: genera e rende scaricabile lo ZIP del sito statico senza pubblicare su GitHub e senza richiedere token o repository, a prescindere dalle impostazioni. Risolve l'errore "repository non configurato" per chi vuole solo l'archivio del sito.
+* Rimosso il pulsante "Scarica ZIP del plugin" (fuori contesto).
 
 = 1.13.0 =
 * Nuova modalita' "solo export": disattivando la pubblicazione su GitHub (Impostazioni > GitHub > Pubblicazione), l'export genera soltanto lo ZIP del sito statico, scaricabile da dashboard e Artefatti, senza bisogno di token o repository. Ideale per caricare il sito manualmente su qualsiasi hosting. La pipeline salta le fasi di deploy e gli ZIP vengono generati automaticamente.
