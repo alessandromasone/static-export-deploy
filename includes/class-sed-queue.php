@@ -58,13 +58,18 @@ class SED_Queue {
 			return new WP_Error( 'sed_busy', 'Un export e\' gia\' in corso.' );
 		}
 
-		// Validazioni preliminari.
-		$repo = SED_Settings::resolve_repo();
-		if ( '' === $repo || false === strpos( $repo, '/' ) ) {
-			return new WP_Error( 'sed_repo', 'Repository non configurato: imposta almeno il proprietario (owner) GitHub nelle impostazioni.' );
-		}
-		if ( ! SED_Settings::has_token() ) {
-			return new WP_Error( 'sed_token', 'Token GitHub mancante: configuralo nelle impostazioni.' );
+		// Validazioni preliminari: token e repository servono solo se il
+		// deploy su GitHub e' attivo. In modalita' "solo export/ZIP" si procede
+		// anche senza credenziali.
+		$deploy_enabled = (bool) SED_Settings::get( 'deploy_enabled' );
+		if ( $deploy_enabled ) {
+			$repo = SED_Settings::resolve_repo();
+			if ( '' === $repo || false === strpos( $repo, '/' ) ) {
+				return new WP_Error( 'sed_repo', 'Repository non configurato: imposta almeno il proprietario (owner) GitHub nelle impostazioni.' );
+			}
+			if ( ! SED_Settings::has_token() ) {
+				return new WP_Error( 'sed_token', 'Token GitHub mancante: configuralo nelle impostazioni.' );
+			}
 		}
 
 		$uploads = wp_upload_dir();
@@ -125,6 +130,7 @@ class SED_Queue {
 				'seo_drop_users_sitemap' => $settings['seo_drop_users_sitemap'],
 				'lang_slugs_list'        => SED_Settings::language_slugs(),
 				'make_zips'    => $settings['make_zips'],
+				'deploy_enabled' => $settings['deploy_enabled'],
 				'deploy_raw'   => $settings['deploy_raw'],
 				'branch_raw'   => $settings['branch_raw'],
 				'branch_main'  => $settings['branch_main'],
@@ -192,7 +198,9 @@ class SED_Queue {
 		if ( $job ) {
 			$job['status']            = 'done';
 			$job['phase']             = 'done';
-			$job['progress']['label'] = 'Export concluso e pubblicato su GitHub.';
+			$job['progress']['label'] = empty( $job['opts']['deploy_enabled'] )
+				? 'Export completato: scarica lo ZIP del sito qui sotto.'
+				: 'Export concluso e pubblicato su GitHub.';
 			self::save_job( $job );
 		}
 		SED_Logger::log( '====== PROCEDURA GLOBALE COMPLETATA CON SUCCESSO ======' );
@@ -315,10 +323,12 @@ class SED_Queue {
 		$idx  = array_search( $job['phase'], $flow, true );
 
 		// Avanza saltando le fasi disabilitate dalle opzioni.
+		$deploy_off = empty( $job['opts']['deploy_enabled'] );
 		do {
 			$idx  = min( $idx + 1, count( $flow ) - 1 );
 			$next = $flow[ $idx ];
-			$skip = ( 'deploy_raw' === $next && empty( $job['opts']['deploy_raw'] ) )
+			$skip = ( 'deploy_raw' === $next && ( $deploy_off || empty( $job['opts']['deploy_raw'] ) ) )
+				|| ( 'deploy_main' === $next && $deploy_off )
 				|| ( in_array( $next, array( 'zip_raw', 'zip_main' ), true ) && empty( $job['opts']['make_zips'] ) );
 		} while ( $skip && 'done' !== $next );
 

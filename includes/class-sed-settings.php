@@ -120,7 +120,12 @@ class SED_Settings {
 		$new['exclude_paths']  = sanitize_textarea_field( $input['exclude_paths'] ?? '' );
 		$new['preserve_files'] = sanitize_textarea_field( $input['preserve_files'] ?? '' );
 		$new['deploy_engine']  = ( 'api' === ( $input['deploy_engine'] ?? 'pack' ) ) ? 'api' : 'pack';
+		$new['deploy_enabled'] = empty( $input['deploy_enabled'] ) ? 0 : 1;
 		$new['make_zips']      = empty( $input['make_zips'] ) ? 0 : 1;
+		// Senza deploy, gli ZIP sono l'unico output: vengono forzati.
+		if ( ! $new['deploy_enabled'] ) {
+			$new['make_zips'] = 1;
+		}
 		$new['schedule']       = in_array( $input['schedule'] ?? 'manual', array( 'manual', 'daily', 'weekly' ), true ) ? $input['schedule'] : 'manual';
 		$new['batch_seconds']  = min( 50, max( 5, absint( $input['batch_seconds'] ?? 20 ) ) );
 		$new['parallel_uploads'] = min( 20, max( 1, absint( $input['parallel_uploads'] ?? 8 ) ) );

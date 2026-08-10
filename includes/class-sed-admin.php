@@ -484,14 +484,17 @@ class SED_Admin {
 		$settings   = SED_Settings::all();
 		$prod_parts = SED_Settings::prod_url_parts();
 		$langs      = SED_Settings::language_slugs();
-		$ready      = SED_Settings::has_token() && false !== strpos( $repo, '/' );
+		$deploy_on  = ! empty( $settings['deploy_enabled'] );
+		// Con deploy attivo servono token e repo; in modalita' solo export/ZIP
+		// non serve nulla, l'export puo' partire subito.
+		$ready      = ! $deploy_on || ( SED_Settings::has_token() && false !== strpos( $repo, '/' ) );
 		$settings_url = admin_url( 'admin.php?page=sed-settings' );
 		$running    = $job && 'running' === $job['status'];
 		?>
 
 		<?php if ( ! $ready ) : ?>
 			<div class="notice notice-warning inline sed-notice">
-				<p>Per iniziare servono il <strong>token GitHub</strong> e il <strong>proprietario</strong> del repository: <a href="<?php echo esc_url( $settings_url ); ?>">configurali nelle impostazioni</a>.</p>
+				<p>Per pubblicare su GitHub servono il <strong>token</strong> e il <strong>proprietario</strong> del repository: <a href="<?php echo esc_url( $settings_url ); ?>">configurali nelle impostazioni</a>, oppure disattiva la pubblicazione per esportare solo lo ZIP del sito.</p>
 			</div>
 		<?php endif; ?>
 
@@ -531,7 +534,7 @@ class SED_Admin {
 					<div id="sed-error" class="notice notice-error inline" style="display:none"><p></p></div>
 
 					<p class="sed-actions">
-						<button class="button button-primary" id="sed-start" data-ready="<?php echo $ready ? '1' : '0'; ?>" <?php disabled( ! $ready || $running ); ?>>Avvia export &amp; deploy</button>
+						<button class="button button-primary" id="sed-start" data-ready="<?php echo $ready ? '1' : '0'; ?>" <?php disabled( ! $ready || $running ); ?>><?php echo $deploy_on ? 'Avvia export &amp; deploy' : 'Avvia export (solo ZIP)'; ?></button>
 						<button class="button button-link-delete" id="sed-cancel" <?php echo $running ? '' : 'style="display:none"'; ?>>Annulla</button>
 					</p>
 
@@ -577,7 +580,7 @@ class SED_Admin {
 						</tr>
 						<tr>
 							<th>Deploy</th>
-							<td><?php echo 'pack' === $settings['deploy_engine'] ? 'pacchetto git (1 upload)' : 'API REST'; ?><?php echo $settings['make_zips'] ? ', con ZIP scaricabili' : ''; ?></td>
+							<td><?php echo empty( $settings['deploy_enabled'] ) ? 'disattivato (solo ZIP del sito)' : ( ( 'pack' === $settings['deploy_engine'] ? 'pacchetto git (1 upload)' : 'API REST' ) . ( $settings['make_zips'] ? ', con ZIP scaricabili' : '' ) ); ?></td>
 						</tr>
 						<tr>
 							<th>Token</th>
@@ -614,6 +617,15 @@ class SED_Admin {
 
 			<h2 class="title">GitHub</h2>
 			<p>Dove pubblicare il sito statico. Serve un token con permesso di scrittura sui contenuti del repository.</p>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row">Pubblicazione</th>
+					<td>
+						<label><input type="checkbox" name="deploy_enabled" value="1" <?php checked( $s['deploy_enabled'] ); ?> /> Pubblica il sito su GitHub al termine dell'export</label>
+						<p class="description">Se disattivi la pubblicazione, l'export produce solo lo <strong>ZIP del sito</strong> (scaricabile da dashboard e Artefatti), da caricare dove preferisci &mdash; e non serve alcun token o repository.</p>
+					</td>
+				</tr>
+			</table>
 			<table class="form-table" role="presentation">
 				<tr>
 					<th scope="row"><label for="github_token">Token di accesso</label></th>
@@ -865,7 +877,10 @@ class SED_Admin {
 				<tr>
 					<th scope="row">ZIP scaricabili</th>
 					<td>
-						<label><input type="checkbox" name="make_zips" value="1" <?php checked( $s['make_zips'] ); ?> /> Crea gli ZIP dell'export originale e di quello ottimizzato</label>
+						<label><input type="checkbox" name="make_zips" value="1" <?php checked( $s['make_zips'] || empty( $s['deploy_enabled'] ) ); ?> /> Crea gli ZIP dell'export originale e di quello ottimizzato</label>
+						<?php if ( empty( $s['deploy_enabled'] ) ) : ?>
+							<p class="description">Con la pubblicazione su GitHub disattivata, gli ZIP sono l'unico output dell'export e vengono quindi sempre generati.</p>
+						<?php endif; ?>
 					</td>
 				</tr>
 			</table>
