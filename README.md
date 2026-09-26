@@ -1,3 +1,8 @@
+> [!NOTE]
+> Questo repository verrà archiviato perché non ho più necessità di portarne avanti lo sviluppo o la manutenzione.
+>
+> Per nuovi progetti di siti statici consiglio di valutare **[Hugo](https://gohugo.io/)**, un generatore di siti statici maturo, veloce e ampiamente supportato.
+
 # Static Export & Deploy
 
 Plugin WordPress che esporta il sito in **HTML statico**, lo **ottimizza** (WebP, pulizia HTML, SEO, HTTPS) e lo **pubblica su GitHub** — tutto in background, senza bisogno di `git` sul server.
